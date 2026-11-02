@@ -42,7 +42,7 @@ tests/      Current application, runtime, and package tests
 ### 1. Clone
 
 ```bash
-git clone https://github.com/harryhua-ai/ne30x-app.git
+git clone https://github.com/camthink-ai/ne30x-app.git
 cd ne30x-app
 ```
 
