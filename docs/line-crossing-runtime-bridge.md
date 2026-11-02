@@ -3,10 +3,10 @@
 Authoritative inputs: ne301 #84 comment 6229932486 (frozen browser-level typed
 MessagePort bridge v1, shared with the Host implementation) and the App #32
 `ght-contract`. This document is the App-owned HOW for that frozen WHAT: the
-production signed counting UI consumes Host-granted capabilities only through
-this adapter and fails closed on every deviation. It does not re-freeze wire
-semantics, grant Host API passthrough, or claim any device/cross-site property
-that has not been executed.
+production counting UI (NEAPP05 unsigned admin-installed package) consumes
+Host-granted capabilities only through this adapter and fails closed on every
+deviation. It does not re-freeze wire semantics, grant Host API passthrough,
+or claim any device/cross-site property that has not been executed.
 
 ## Production entry
 
@@ -82,27 +82,6 @@ that capability instead of partial rendering:
   reconcile with the request; otherwise the UI shows `UNKNOWN`/`CONFLICT` and
   never optimistic-commits.
 
-## Isolation position (software-verifiable part)
-
-The runtime browser fixture embeds the production build in
-`sandbox="allow-scripts allow-same-origin"` with Host at
-`host.example.test:<port>` and App at `app.other.test:<port>`. Chrome maps both
-`.test` names to loopback with `--host-resolver-rules`; the sites are distinct
-without relying on device DNS. The cross-site case runs the bridge v1 flow,
-both App-origin Workers and MSE/H264 playback. It also verifies that the
-HttpOnly `SameSite=Strict` Host cookie is absent from the App's credentialed
-admin POST, the write is not committed, and parent DOM/storage access raises
-`SecurityError`. A same-origin control confirms that DOM/storage are exposed
-when the sandbox is widened to the Host origin. A same-site, different-port
-control confirms that the Host cookie is sent and the admin write succeeds;
-TCP port separation is not cookie isolation.
-
-These are software lab results for the fixture's cookie and admin endpoint,
-not claims about target Host policy. The UI contract test verifies the
-committed signed NEUI asset paths, lengths and hashes against the rebuilt
-production files served by the browser fixture. Opaque-origin embedding still
-fails closed (the App asset CSP blocks scripts there).
-
 ## Evidence and reproduction
 
 From the repository root, offline:
@@ -119,31 +98,15 @@ builds, the UI offline browser suite (Google Chrome via Playwright,
   adapter tests (validation, seq/replay, pending cap, deadlines, revocation,
   payload fail-closed, generation cross-checks);
 - `tests/line-crossing-runtime/browser.test.mjs` — real-Chrome fixture with a
-  Host broker page, the signed-equivalent production build in the sandboxed
+  Host broker page, the production build in the sandboxed
   App iframe and a hostile sibling iframe; covers authorized use (writes,
   counters reset, media open/close under revocation), absent/wrong/limited
   grants, opaque origin, seq rollback, oversize, late-ACK after revoke,
   stale-session echo, sibling forgery, cross-site cookie/DOM/storage/admin
   denial, same-origin widening and the same-site port-only cookie leak.
-
-`docs/evidence/line-crossing-runtime/runtime-fixture-evidence.json` pins the
-executed case list; the suite re-verifies it on every run (`WRITE_EVIDENCE=1`
-regenerates it after an intentional case change).
-
-Signed bundle reproduction (NEUI v1, test identity only):
-
-```sh
-git status --porcelain   # must be clean on apps/line-crossing/ui and tests/line-crossing-ui
-bash tests/line-crossing-ui/package.sh
-```
-
-`package.sh` rebuilds `tests/line-crossing-ui/.build/production` content into
-`docs/evidence/line-crossing-ui/line-crossing.neui` via
-`package/sidecar/neui_pack_v1.py` (invoked, never modified), offline-verifies
-it with `neui_verify_v1.py` against `docs/evidence/spec-v3/golden.neapp.v3`,
-and rewrites the verification/provenance sidecars with `source_commit`.
-`tests/line-crossing-ui/contract.test.mjs` then asserts per-asset byte
-equality between the committed signed bundle and the rebuilt production build.
+  These are fixture-level lab cases about the fixture's cookie and admin
+  endpoint, not claims about target Host policy; the approved deployment
+  model is the NEAPP05 unsigned admin-installed App.
 
 Executed with: Node v22.22.3, Google Chrome 155.0.8059.80 (headless, Playwright
 chromium.launch), ffmpeg-generated baseline H264 fixture.
@@ -155,12 +118,12 @@ chromium.launch), ffmpeg-generated baseline H264 fixture.
 - #88/#101 Host policy engine and App #30 native Enable producer remain
   unavailable by design. App #27's v4 entry now arms its live producer and
   publishes through `live_publish`; the fixture boundary is described below
-  and does not prove production signed admission.
+  and does not prove production admission.
 - Production Host resource service/session grant, target hardware, and device
   acceptance remain NOT_RUN.
 - Real camera/stream, target-board memory/network/flash/integration, device
   acceptance, production signing keys, production downloads/recording export
-  (signed FileSaver `saveAs` remains failed; the anchor fallback requires a
+  (FileSaver `saveAs` remains failed; the anchor fallback requires a
   Host download token, and no recording download PASS is claimed).
 - Target deployment DNS/TLS, camera and Host site topology; the `.test` resolver
   mapping is local to this Chrome fixture. Opaque-origin positive operation
@@ -203,7 +166,7 @@ state, and `RESYNC_REQUIRED` after resume.
 ### Production entry and capability boundary
 
 The frozen 64-byte v4 function table exposes `live_publish(const void *,
-uint32_t)` but does not expose the signed session generation,
+uint32_t)` but does not expose the Host session generation,
 `live_publish_max`, or `live_track_max`. The v4 production entry now creates a
 bounded local entry epoch, arms `lc_lvn4` with the 9008-byte/64-track profile,
 binds the bus observer, and routes produced packets through the real
@@ -212,9 +175,9 @@ the earlier claim that the production entry does not arm or publish.
 
 The entry test exercises that path with a fixture callback and a real pinned
 Host parser/read implementation, but its Host authorization boundary is
-simulated. It does not establish signed production admission, a production
-Host session grant, or device behavior. The independent signed-Host admission
-tests cover package/admission behavior separately; they do not combine signed
+simulated. It does not establish production admission, a production
+Host session grant, or device behavior. Package/admission behavior is covered
+separately by the unsigned NEAPP05 admission suites; they do not combine
 admission with the App entry/tracker callback path.
 
 ### Joint test and byte fixtures
@@ -229,10 +192,9 @@ The script compiles App producer code with Host parser sources archived
 read-only from exact Host candidate
 `4c1c0d7ec5bc8ae18fae4ca5a31f0699b7c5895b`. The C test passes producer
 buffers directly to `app_host_live_ingest`, then checks Host read/cursor and
-snapshot results. Fixtures emitted from those same buffers are in
-`docs/evidence/line-crossing-live/fixtures/`:
-
-`fixture-sha256.txt` pins each fixture's SHA-256 and byte length.
+snapshot results. The suite regenerates every fixture and its SHA-256
+manifest at runtime into `tests/line-crossing-live/work/evidence/`; no
+fixture bytes are committed to the repository.
 
 | Fixture | Producer output | Host result |
 | --- | --- | --- |
@@ -242,7 +204,7 @@ snapshot results. Fixtures emitted from those same buffers are in
 | `kind2-zero-track.bin` | kind2 full replacement with zero tracks | ACCEPT; Host snapshot read returns zero tracks |
 
 The test identity is `trusted-test-owner` / `line-crossing`, session 7001,
-with test caps 9008/64. These are fixture inputs, not signed production
+with test caps 9008/64. These are fixture inputs, not production
 admission. Negative and boundary cases are individually asserted:
 
 | Case | Expected/result |
@@ -281,7 +243,7 @@ snapshot because that SHA is created after the evidence files are committed.
 - The production v4 App entry arms the producer with a bounded local epoch and
   9008/64 profile and routes packets through `live_publish`. The 79/0 entry
   fixture exercises that callback path with simulated Host authorization; it
-  is not signed production admission or a device result. No production keys
+  is not production admission or a device result. No production keys
   or device were used.
 - Web/UI integration is NOT_RUN and outside this native producer result;
   #108/#113 work is not represented here.
