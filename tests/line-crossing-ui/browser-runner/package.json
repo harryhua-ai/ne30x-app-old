@@ -1,16 +1,13 @@
 {
-  "name": "ne301-counting-sidecar-feasibility",
+  "name": "ne30x-line-crossing-ui-browser-runner",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
   },
   "scripts": {
-    "build:fixture": "node build-fixture.mjs",
-    "test:binding": "node --test binding.test.mjs binding-counting.test.mjs",
-    "test:native-v3": "node native-v3.test.mjs",
-    "test:browser": "node --test browser.test.mjs",
-    "test": "node run-all.mjs"
+    "build": "node build.mjs",
+    "test": "bash ../run.sh"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.1.15",
