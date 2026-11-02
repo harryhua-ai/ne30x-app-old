@@ -1,0 +1,136 @@
+name: NEAPP Unsigned Verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.22.3'
+
+      - name: Prepare evidence directory
+        run: mkdir -p "$RUNNER_TEMP/neapp-unsigned-evidence"
+
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.5.2
+
+      - name: Install ARM compiler and H.264 tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes gcc-arm-none-eabi binutils-arm-none-eabi ffmpeg
+
+      - name: Install Python verifier dependency
+        run: python -m pip install --disable-pip-version-check cryptography==48.0.0
+
+      - name: Prepare browser test dependencies
+        run: |
+          pnpm --dir tests/line-crossing-ui install --frozen-lockfile --ignore-scripts
+          npm ci --prefix tests/line-crossing-ui/browser-runner --ignore-scripts
+          npx --yes playwright@1.64.0 install --with-deps chromium
+
+      - name: Run UI, H.264, runtime, bridge, and NEAPP05 positive and negative acceptance
+        shell: bash
+        run: |
+          set -o pipefail
+          export LC_SAVE_DIAGNOSTIC_MODE=matrix
+          export LC_SAVE_EVIDENCE_PATH="$RUNNER_TEMP/neapp-unsigned-evidence/line-save-diagnostics.json"
+          pnpm --dir tests/line-crossing-ui test 2>&1 | tee "$RUNNER_TEMP/neapp-unsigned-evidence/ui-runtime-bridge.log"
+          bash tests/line-crossing-app/run_tests.sh 2>&1 | tee "$RUNNER_TEMP/neapp-unsigned-evidence/current-native.log"
+          python -m unittest discover -s tests/unsigned -v 2>&1 | tee "$RUNNER_TEMP/neapp-unsigned-evidence/unsigned-format.log"
+          python -m unittest discover -s tests/release -v 2>&1 | tee "$RUNNER_TEMP/neapp-unsigned-evidence/release-unit.log"
+
+      - name: Build and independently verify the production candidate package
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_dir="$RUNNER_TEMP/neapp-unsigned-evidence"
+          native=$(make -C apps/line-crossing/app -s print-v4_app_version)
+          bash package/release/build_neapp.sh --out-dir "$RUNNER_TEMP/neapp-candidate" \
+            --source-sha "$GITHUB_SHA"
+          package="$RUNNER_TEMP/neapp-candidate/line-crossing-$native.neapp"
+          python - "$package.provenance.json" > "$evidence_dir/candidate-metadata.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          provenance = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          print(json.dumps({
+              "artifact": "neapp-v5-unsigned CI candidate (not an official Release)",
+              "app_id": provenance["app_id"],
+              "native_version": provenance["native_version"],
+              "ui_version": provenance["ui_version"],
+              "package_sha256": provenance["package"]["sha256"],
+              "source_commit": provenance["source_commit"],
+          }, indent=2, sort_keys=True))
+          PY
+          echo "NEAPP_CI_CANDIDATE_DIR=$RUNNER_TEMP/neapp-candidate" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: neapp-ci-candidate-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/neapp-candidate/*.neapp
+            ${{ runner.temp }}/neapp-candidate/*.neapp.sha256
+            ${{ runner.temp }}/neapp-candidate/*.neapp.provenance.json
+            ${{ runner.temp }}/neapp-candidate/*.verification.json
+            ${{ runner.temp }}/neapp-candidate/candidate.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Record verification run metadata
+        if: always()
+        env:
+          VERIFICATION_RESULT: ${{ job.status }}
+        run: |
+          python - "$RUNNER_TEMP/neapp-unsigned-evidence/ci-summary.json" <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          Path(sys.argv[1]).write_text(json.dumps({
+              "workflow": "NEAPP Unsigned Verification",
+              "result": os.environ["VERIFICATION_RESULT"],
+              "source_sha": os.environ["GITHUB_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
+              "signing_inputs_required": False,
+              "installable_neapp_artifact_uploaded": True,
+              "installable_neapp_artifact": "neapp-ci-candidate (CI candidate, not an official Release)",
+          }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: neapp-unsigned-verification-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/neapp-unsigned-evidence/*.json
+            ${{ runner.temp }}/neapp-unsigned-evidence/*.log
+            ${{ runner.temp }}/neapp-unsigned-evidence/*.txt
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
