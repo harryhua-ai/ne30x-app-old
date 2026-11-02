@@ -48,15 +48,16 @@ jobs:
           npm ci --prefix tests/line-crossing-ui/browser-runner --ignore-scripts
           npx --yes playwright@1.64.0 install --with-deps chromium
 
-      - name: Run UI, H.264, runtime, bridge, and unsigned-package positive and negative acceptance
+      - name: Run UI, H.264, runtime, bridge, and NEAPP05 positive and negative acceptance
         shell: bash
         run: |
           set -o pipefail
           export LC_SAVE_DIAGNOSTIC_MODE=matrix
           export LC_SAVE_EVIDENCE_PATH="$RUNNER_TEMP/neapp-unsigned-evidence/line-save-diagnostics.json"
           pnpm --dir tests/line-crossing-ui test 2>&1 | tee "$RUNNER_TEMP/neapp-unsigned-evidence/ui-runtime-bridge.log"
+          bash tests/line-crossing-app/run_tests.sh 2>&1 | tee "$RUNNER_TEMP/neapp-unsigned-evidence/current-native.log"
           python -m unittest discover -s tests/unsigned -v 2>&1 | tee "$RUNNER_TEMP/neapp-unsigned-evidence/unsigned-format.log"
-          python -m unittest discover -s tests/nepk-v1_1 -v 2>&1 | tee "$RUNNER_TEMP/neapp-unsigned-evidence/legacy-signed-format-regression.log"
+          python -m unittest discover -s tests/release -v 2>&1 | tee "$RUNNER_TEMP/neapp-unsigned-evidence/release-unit.log"
 
       - name: Build and independently verify the production candidate package
         if: success()

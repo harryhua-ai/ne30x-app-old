@@ -10,12 +10,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "package"))
-sys.path.insert(0, str(ROOT / "package" / "sidecar"))
 sys.path.insert(0, str(ROOT / "package" / "unsigned"))
-sys.path.insert(0, str(ROOT / "package" / "vnext"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import neapp_v4_format as v4
+import neapp_v5_native as v4
 import neapp_v5_format as v5
 from support import FIXTURE_MARKER, fixture_elf, pack_fixture, write_fixture_ui_tree
 

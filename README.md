@@ -21,18 +21,12 @@ An AI-powered line-crossing application featuring:
 - MQTT and Webhook reporting
 - Integrated web interface
 
-### Hello App
-
-A minimal example of a standalone native NE301 application.
-
 ## Repository Structure
 
 ```text
 apps/       Application source code and Web UI
-package/    .neapp packaging and verification
-tests/      Automated tests
-tools/      Development utilities
-docs/       Technical documentation
+package/    NEAPP05 packaging, verification, and release utilities
+tests/      Current application, runtime, and package tests
 .github/    CI workflows
 ```
 
@@ -110,7 +104,7 @@ A successful verification returns `PASS`.
 # Line Crossing algorithm
 bash tests/line-crossing/run_tests.sh
 
-# Native application
+# Current native application and ABI v4 tests
 bash tests/line-crossing-app/run_tests.sh
 
 # Package verification

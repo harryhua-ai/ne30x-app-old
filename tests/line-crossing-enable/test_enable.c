@@ -1,5 +1,6 @@
 #include "test_common.h"
 #include "host_stub.h"
+#include "lc_app_entry_v4.h"
 #include "lc_bus.h"
 #include "lc_stateblob.h"
 #include "lc_ctrl.h"
@@ -87,8 +88,8 @@ static void deliver_crossing(lcstub_t *stub, lcbus_t *bus)
 static void test_v3_corrupt_paused_state_blocks_frame_and_idle(void)
 {
     lcstub_t *stub = lcstub_new();
-    lc_app_api_v2_t api;
-    lcstub_make_table(stub, &api);
+    lc_app_api_v4_t api;
+    lcstub_make_table_v4(stub, &api);
     lcstub_set_model(stub, 1, 7u, 3u, 1u, "od-demo", "1.2");
     lcstub_set_class(stub, 0u, "person");
 
@@ -96,7 +97,7 @@ static void test_v3_corrupt_paused_state_blocks_frame_and_idle(void)
     uint32_t paused_len = make_paused_schema3(paused, sizeof(paused));
     lcstub_set_state(stub, paused, paused_len, 6u);
 
-    lcbus_host_ops_t ops = *lcbus_abi_ops();
+    lcbus_host_ops_t ops = *lcbus_abi_ops_v4();
     ops.user = &api;
     lcbus_t bus;
     lcbus_init(&bus, &ops);
@@ -123,8 +124,8 @@ static void test_v3_corrupt_paused_state_blocks_frame_and_idle(void)
 static void test_v4_paused_schema3_restores_and_blocks_frame(void)
 {
     lcstub_t *stub = lcstub_new();
-    lc_app_api_v2_t api;
-    lcstub_make_table(stub, &api);
+    lc_app_api_v4_t api;
+    lcstub_make_table_v4(stub, &api);
     lcstub_set_model(stub, 1, 7u, 3u, 1u, "od-demo", "1.2");
     lcstub_set_class(stub, 0u, "person");
 
@@ -132,7 +133,7 @@ static void test_v4_paused_schema3_restores_and_blocks_frame(void)
     uint32_t paused_len = make_paused_schema3(paused, sizeof(paused));
     lcstub_set_state(stub, paused, paused_len, 6u);
 
-    lcbus_host_ops_t ops = *lcbus_abi_ops();
+    lcbus_host_ops_t ops = *lcbus_abi_ops_v4();
     ops.user = &api;
     lcbus_t bus;
     lcbus_init(&bus, &ops);
@@ -158,8 +159,8 @@ static void test_v4_paused_schema3_restores_and_blocks_frame(void)
 static void test_legacy_migration_commits_once(uint32_t schema)
 {
     lcstub_t *stub = lcstub_new();
-    lc_app_api_v2_t api;
-    lcstub_make_table(stub, &api);
+    lc_app_api_v4_t api;
+    lcstub_make_table_v4(stub, &api);
 
     lc_bus_config_t cfg;
     lc_bus_config_defaults(&cfg);
@@ -175,7 +176,7 @@ static void test_legacy_migration_commits_once(uint32_t schema)
     }
     lcstub_set_state(stub, legacy, legacy_len, 12u);
 
-    lcbus_host_ops_t ops = *lcbus_abi_ops();
+    lcbus_host_ops_t ops = *lcbus_abi_ops_v4();
     ops.user = &api;
     lcbus_t first;
     lcbus_init(&first, &ops);
@@ -260,12 +261,12 @@ static void test_schema3_codec_and_failures(void)
 static void test_pause_and_resume_use_new_window_and_tracks(void)
 {
     lcstub_t *stub = lcstub_new();
-    lc_app_api_v2_t api;
-    lcstub_make_table(stub, &api);
+    lc_app_api_v4_t api;
+    lcstub_make_table_v4(stub, &api);
     lcstub_set_model(stub, 1, 7u, 3u, 1u, "od-demo", "1.2");
     lcstub_set_class(stub, 0u, "person");
 
-    lcbus_host_ops_t ops = *lcbus_abi_ops();
+    lcbus_host_ops_t ops = *lcbus_abi_ops_v4();
     ops.user = &api;
     lcbus_t bus;
     lcbus_init(&bus, &ops);
@@ -373,12 +374,12 @@ static void test_pause_and_resume_use_new_window_and_tracks(void)
     lcstub_destroy(stub);
 }
 
-static void start_empty_v4(lcstub_t *stub, lc_app_api_v2_t *api, lcbus_t *bus)
+static void start_empty_v4(lcstub_t *stub, lc_app_api_v4_t *api, lcbus_t *bus)
 {
-    lcstub_make_table(stub, api);
+    lcstub_make_table_v4(stub, api);
     lcstub_set_model(stub, 1, 7u, 3u, 1u, "od-demo", "1.2");
     lcstub_set_class(stub, 0u, "person");
-    lcbus_host_ops_t ops = *lcbus_abi_ops();
+    lcbus_host_ops_t ops = *lcbus_abi_ops_v4();
     ops.user = api;
     lcbus_init(bus, &ops);
     bus->state_schema = 3u;
@@ -391,7 +392,7 @@ static void start_empty_v4(lcstub_t *stub, lc_app_api_v2_t *api, lcbus_t *bus)
 static void test_enable_commit_failures_restrict_business_state(void)
 {
     lcstub_t *io_stub = lcstub_new();
-    lc_app_api_v2_t io_api;
+    lc_app_api_v4_t io_api;
     lcbus_t io_bus;
     start_empty_v4(io_stub, &io_api, &io_bus);
     uint32_t revision = 0;
@@ -407,7 +408,7 @@ static void test_enable_commit_failures_restrict_business_state(void)
     lcstub_destroy(io_stub);
 
     lcstub_t *read_stub = lcstub_new();
-    lc_app_api_v2_t read_api;
+    lc_app_api_v4_t read_api;
     lcbus_t read_bus;
     start_empty_v4(read_stub, &read_api, &read_bus);
     uint32_t read_revision = read_bus.revision;
@@ -424,7 +425,7 @@ static void test_enable_commit_failures_restrict_business_state(void)
     lcstub_destroy(read_stub);
 
     lcstub_t *torn_stub = lcstub_new();
-    lc_app_api_v2_t torn_api;
+    lc_app_api_v4_t torn_api;
     lcbus_t torn_bus;
     start_empty_v4(torn_stub, &torn_api, &torn_bus);
     torn_stub->state_torn_write = 1;
@@ -442,7 +443,7 @@ static void test_enable_commit_failures_restrict_business_state(void)
     lcstub_destroy(torn_stub);
 
     lcstub_t *conflict_stub = lcstub_new();
-    lc_app_api_v2_t conflict_api;
+    lc_app_api_v4_t conflict_api;
     lcbus_t conflict_bus;
     start_empty_v4(conflict_stub, &conflict_api, &conflict_bus);
     conflict_stub->state_revision++;
@@ -500,7 +501,7 @@ static void start_v4_control(lcstub_t *stub, lc_app_api_v4_t *api,
                              lcbus_t *bus, lc_ctrl_t *ctrl)
 {
     lcstub_make_table_v4(stub, api);
-    lcbus_host_ops_t ops = *lcbus_abi_ops();
+    lcbus_host_ops_t ops = *lcbus_abi_ops_v4();
     ops.user = api;
     lcbus_init(bus, &ops);
     bus->state_schema = LC_ST_BLOB_SCHEMA_ENABLE;

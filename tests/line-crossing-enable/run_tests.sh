@@ -15,7 +15,8 @@ CFLAGS="-Wall -Wextra -Werror -std=c11 -O2 -I$APP_DIR/include -I$APP_DIR/app -I$
 "$CC" $CFLAGS \
     "$TEST_DIR/test_enable.c" \
     "$STUB_DIR/host_stub.c" \
-    "$APP_DIR/app/lc_app_entry.c" \
+    "$APP_DIR/app/lc_app_entry_v4.c" \
+    "$APP_DIR/app/lc_lvn4.c" \
     "$APP_DIR/app/lc_bus.c" \
     "$APP_DIR/app/lc_bus_config.c" \
     "$APP_DIR/app/lc_stateblob.c" \

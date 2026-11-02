@@ -15,7 +15,7 @@ const collect = directory => readdirSync(directory, { withFileTypes: true }).fla
 })
 
 
-test('production bundle stays inside the NEUI v1 asset envelope', () => {
+test('production bundle stays inside the NEAPP05 UI asset envelope', () => {
   const files = collect(productionRoot).map(file => ({ path: path.relative(productionRoot, file).split(path.sep).join('/'), bytes: readFileSync(file) }))
   assert.ok(files.length <= 64)
   assert.ok(files.every(file => file.bytes.length <= 1024 * 1024))
