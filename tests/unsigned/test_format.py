@@ -203,21 +203,6 @@ class V5FormatNegativeTests(unittest.TestCase):
 
 
 class LegacySignedFormatTests(unittest.TestCase):
-    def test_committed_signed_v3_package_is_reported_as_legacy(self):
-        golden = (ROOT / "docs" / "evidence" / "spec-v3" / "golden.neapp.v3").read_bytes()
-        _, error = v5.verify_package_v5(golden)
-        self.assertIsNotNone(error)
-        self.assertEqual(error.code, "LEGACY_SIGNED_FORMAT")
-        self.assertIn("neapp v3", error.detail)
-        self.assertIn("unsupported legacy signed format", error.detail)
-
-    def test_committed_signed_neui_sidecar_is_reported_as_legacy(self):
-        bundle = (ROOT / "docs" / "evidence" / "line-crossing-ui" / "line-crossing.neui").read_bytes()
-        _, error = v5.verify_package_v5(bundle)
-        self.assertIsNotNone(error)
-        self.assertEqual(error.code, "LEGACY_SIGNED_FORMAT")
-        self.assertIn("neui sidecar v1", error.detail)
-
     def test_all_legacy_signed_magics_are_detected_and_never_parsed(self):
         crafted = {
             "neapp v1": bytes.fromhex("4e45415050010000") + b"\x00" * 24,

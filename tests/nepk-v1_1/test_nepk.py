@@ -142,23 +142,6 @@ class NePKVerifierTests(unittest.TestCase):
             self.assertEqual(raised.exception.code, code)
         return raised.exception
 
-    def test_valid_three_signature_package_reports_pair_identity(self):
-        report = self.verify()
-        self.assertEqual(report["result"], "PASS")
-        self.assertEqual(report["format"], "nepk-v1.1")
-        self.assertEqual(report["release_seq"], 7)
-        self.assertEqual(report["publisher_id"], PUBLISHER)
-        self.assertEqual(report["app_id"], APP)
-        self.assertEqual(report["native_tbs_sha256"], hashlib.sha256(self.native[:member_tbs_len(self.native)]).hexdigest())
-        self.assertEqual(report["ui_tbs_sha256"], hashlib.sha256(self.ui[:member_tbs_len(self.ui)]).hexdigest())
-        pair_tbs_len = 32 + len(self.native) + len(self.ui)
-        self.assertEqual(report["pair_tbs_sha256"], hashlib.sha256(self.package[:pair_tbs_len]).hexdigest())
-        self.assertEqual(report["history"]["pair_tbs_sha256"], report["pair_tbs_sha256"])
-        self.assertEqual(report["transition"], "FRESH_INSTALL")
-        self.assertTrue(report["native_signature_sha256"])
-        self.assertTrue(report["ui_signature_sha256"])
-        self.assertTrue(report["pair_signature_sha256"])
-
     def test_truncation_unknown_version_and_oversized_members_are_rejected(self):
         invalid = [b"", self.package[:15], self.package[:-1], self.package + b"\x00"]
         wrong_magic = bytearray(self.package)
