@@ -27,7 +27,7 @@ An AI-powered line-crossing application featuring:
 apps/       Application source code and Web UI
 package/    NEAPP05 packaging, verification, and release utilities
 tests/      Current application, runtime, and package tests
-.github/    CI workflows
+.github/    One build, verification, and draft-release workflow
 ```
 
 ## Build and Package
@@ -132,8 +132,8 @@ real `.neapp` as a downloadable CI artifact named
 `neapp-ci-candidate-*` together with its SHA-256, provenance metadata, and
 verification report. CI artifacts are candidates, not official releases.
 
-Releases run through **Actions → Release App → Run workflow** with a single
-input `vX.Y.Z`. The workflow validates the version strictly, fails closed on
+Releases run through **Actions → NEAPP05 Build and Release → Run workflow** with
+an explicit `vX.Y.Z` input. Leave the input blank for verification only. The workflow validates the version strictly, fails closed on
 any existing tag/release/draft conflict, builds and verifies the package,
 generates English release notes (changes, package identity with repository
 version and packaged native/UI versions recorded separately, compatibility,
