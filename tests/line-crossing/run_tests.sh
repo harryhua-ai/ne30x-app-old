@@ -10,7 +10,7 @@
 #   [3/4] build & run the deterministic equivalence harness against
 #         the ported core and diff its trace against the committed
 #         golden trace (generated from the pinned upstream sources)
-#   [4/4] write evidence logs under docs/evidence/p7-line-crossing/
+#   [4/4] write evidence logs under tests/line-crossing/work/evidence/
 #
 # Optional modes (require the pinned ne301 checkout, default
 # ../../ne301 relative to the repo root, override with NE301_SRC):
@@ -28,7 +28,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 TESTS_DIR="$ROOT/tests/line-crossing"
 APP_DIR="$ROOT/apps/line-crossing"
-EVIDENCE_DIR="$ROOT/docs/evidence/p7-line-crossing"
+EVIDENCE_DIR="$TESTS_DIR/work/evidence"
 GOLDEN="$TESTS_DIR/golden/lc_equiv_trace.expected.txt"
 # Optional modes need the pinned ne301 checkout (counting@de25a6f1).
 # Override with NE301_SRC=<path>.  Auto-detected candidates cover the

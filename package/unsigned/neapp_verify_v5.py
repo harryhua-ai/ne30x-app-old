@@ -7,11 +7,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "package"))
-sys.path.insert(0, str(ROOT / "package" / "sidecar"))
 sys.path.insert(0, str(ROOT / "package" / "unsigned"))
-sys.path.insert(0, str(ROOT / "package" / "vnext"))
 
-import neapp_v4_format as v4
+import neapp_v5_native as v4
 import neapp_v5_format as v5
 
 

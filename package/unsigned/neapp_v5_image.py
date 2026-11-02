@@ -7,7 +7,7 @@ import struct
 import zlib
 from pathlib import Path
 
-import neapp_v4_format as fmt4
+import neapp_v5_native as fmt4
 
 ELF_HEADER = struct.Struct("<16sHHIIIIIHHHHHH")
 ELF_PROGRAM_HEADER = struct.Struct("<IIIIIIII")

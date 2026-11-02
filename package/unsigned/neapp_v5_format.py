@@ -9,11 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "package"))
-sys.path.insert(0, str(ROOT / "package" / "sidecar"))
-sys.path.insert(0, str(ROOT / "package" / "vnext"))
 
-import neapp_v4_format as v4
-import neui_sidecar_format as ui
+import neapp_v5_native as v4
+import neapp_v5_ui_assets as ui
 
 CONTAINER_MAGIC = bytes.fromhex("4e45415050050000")
 HEADER_LEN = 16

@@ -14,19 +14,16 @@ const buildRoot = path.join(repoRoot, 'tests/line-crossing-ui/.build')
 const productionRoot = path.join(buildRoot, 'production')
 const h264Path = path.join(buildRoot, 'line-crossing-runtime.h264')
 const fixtureRoot = path.join(testRoot, 'fixture')
-const evidencePath = path.join(repoRoot, 'docs/evidence/line-crossing-runtime/runtime-fixture-evidence.json')
-const signedProvenancePath = path.join(repoRoot, 'docs/evidence/line-crossing-ui/line-crossing.neui.provenance.json')
-const signedProvenance = JSON.parse(readFileSync(signedProvenancePath, 'utf8'))
 const chromePath = process.env.CHROME_PATH || (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : chromium.executablePath())
 const HOST_HOSTNAME = 'host.example.test'
 const APP_HOSTNAME = 'app.other.test'
-const SIGNED_IDENTITY = {
-  publisher_id: signedProvenance.manifest.publisher_id,
-  app_id: signedProvenance.manifest.app_id,
-  publisher_key_sha256: signedProvenance.signer_spki_sha256,
-  native_tbs_sha256: signedProvenance.native_binding.native_tbs_sha256,
-  ui_tbs_sha256: signedProvenance.ui_tbs_sha256,
-  build_id: signedProvenance.source_commit,
+const FIXTURE_IDENTITY = {
+  publisher_id: 'test-publisher',
+  app_id: 'line-crossing',
+  publisher_key_sha256: '11'.repeat(32),
+  native_tbs_sha256: '22'.repeat(32),
+  ui_tbs_sha256: '33'.repeat(32),
+  build_id: 'neapp05-browser-fixture',
   host_boot_generation: 3,
   native_session_generation: 11,
   ui_generation: 1,
@@ -43,43 +40,6 @@ const CASES = [
   { id: 'same-origin-relaxation', title: 'the same-origin control exposes Host DOM and storage to the signed App', outcome: 'negative-control' },
   { id: 'same-site-port-cookie-leak', title: 'the same-site port-only control sends the Host cookie with an App admin write', outcome: 'negative-control' },
 ]
-
-const EVIDENCE = {
-  app_entry: 'apps/line-crossing/ui/src/main.tsx (production build served from the current source tree)',
-  signed_bundle: {
-    bundle_path: signedProvenance.bundle_path,
-    bundle_sha256: signedProvenance.bundle_sha256,
-    ui_tbs_sha256: signedProvenance.ui_tbs_sha256,
-    source_commit: signedProvenance.source_commit,
-    signer_spki_sha256: signedProvenance.signer_spki_sha256,
-    production_asset_equality: 'The historical signed NEUI bundle is checked against its own asset records; the current source build is exercised directly and packaged separately by NEPK v1.1.',
-  },
-  bridge_limits: { max_message_bytes: 16384, max_pending_requests: 4, request_deadline_ms: 10000 },
-  browser: 'Chrome or Chromium with local resolver rules mapping host.example.test and app.other.test to 127.0.0.1',
-  cases: CASES,
-  origin_topology: {
-    host: 'http://host.example.test:<ephemeral-port>',
-    app: 'http://app.other.test:<ephemeral-port>',
-    relation: 'independent sites mapped to loopback by Chrome --host-resolver-rules; no device DNS',
-    same_site_port_control: 'http://host.example.test:<app-port> embeds under http://host.example.test:<host-port>',
-  },
-  isolation: {
-    ac4_lab_status: 'PASS',
-    app_sandbox: 'allow-scripts allow-same-origin',
-    cross_site: 'Host HttpOnly SameSite=Strict cookie exists in the top-level Host context; the signed App receives SecurityError for parent DOM/storage, and a credentialed admin POST reaches the Host without the cookie and does not mutate admin state.',
-    same_origin_control: 'Expected negative control: the same signed App served at the Host origin can read the parent marker and Host localStorage.',
-    same_site_port_control: 'Expected negative control: the same Host hostname on a different TCP port remains same-site; the Strict cookie is sent and the fixture admin write succeeds.',
-  },
-  not_run: [
-    'target deployment App/Host DNS, TLS, and site topology; the .test hostnames are local browser resolver aliases only',
-    'target Host admin cookie/storage policy and admin API behavior beyond this isolated fixture endpoint',
-    'opaque-origin App positive Worker/importScripts/H264 operation (opaque origin fail-closed is exercised instead)',
-    'real device media grant, camera stream and target-board integration',
-    'Host #88 policy engine, App #30 native Enable producer, Host #91/App #27 live producers (fixture answers UNAVAILABLE)',
-  ],
-  recording_download: 'NOT_RUN; signed FileSaver saveAs failure and the anchor fallback Host-token requirement remain open limitations.',
-  protocol: 'ne301.sidecar.bridge.v1',
-}
 
 let browser
 let appServer
@@ -301,7 +261,7 @@ const openHostPage = async (query, browserContext = null, origins = {}) => {
   const targetAppUrl = origins.appUrl || appUrl
   const params = new URLSearchParams(query)
   params.set('app', targetAppUrl)
-  params.set('identity', JSON.stringify(SIGNED_IDENTITY))
+  params.set('identity', JSON.stringify(FIXTURE_IDENTITY))
   await page.goto(`${targetHostUrl}/host/?${params}`, { waitUntil: 'load' })
   const frame = page.frameLocator('#appFrame')
   return { page, frame, workers, targetAppUrl }
@@ -360,7 +320,7 @@ const saveCounterName = async (frame, name) => {
 
 test(CASES[0].title, async () => {
   const { page, frame, workers, targetAppUrl } = await authorize('scenario=normal&enable=unavailable&live=unavailable')
-  assert.deepEqual(await page.evaluate(() => window.__broker.identity), SIGNED_IDENTITY)
+  assert.deepEqual(await page.evaluate(() => window.__broker.identity), FIXTURE_IDENTITY)
   await frame.getByTestId('lc-tab-config').click()
   await frame.getByTestId('lc-page-config').waitFor()
   assert.equal(await frame.getByTestId('lc-counter-name').inputValue(), 'Counter Bridge')
@@ -630,20 +590,7 @@ test('same-site port-only control leaks the Host cookie to a cross-origin App', 
   await page.close()
 })
 
-test('committed runtime fixture evidence matches the executed browser cases', async () => {
-  assert.deepEqual(completedCaseIds.sort(), CASES.map(item => item.id).sort(), 'not every fixture case completed; evidence would be misleading')
-  if (process.env.WRITE_EVIDENCE) {
-    mkdirSync(path.dirname(evidencePath), { recursive: true })
-    writeFileSync(evidencePath, `${JSON.stringify(EVIDENCE, null, 2)}\n`)
-    return
-  }
-  const committed = JSON.parse(readFileSync(evidencePath, 'utf8'))
-  assert.deepEqual(committed.cases, CASES)
-  assert.deepEqual(committed.signed_bundle, EVIDENCE.signed_bundle)
-  assert.equal(committed.protocol, EVIDENCE.protocol)
-  assert.deepEqual(committed.bridge_limits, EVIDENCE.bridge_limits)
-  assert.deepEqual(committed.origin_topology, EVIDENCE.origin_topology)
-  assert.deepEqual(committed.isolation, EVIDENCE.isolation)
-  assert.deepEqual(committed.not_run, EVIDENCE.not_run)
-  assert.equal(committed.recording_download, EVIDENCE.recording_download)
+test('browser fixture executes every current runtime scenario', async () => {
+  assert.deepEqual(completedCaseIds.sort(), CASES.map(item => item.id).sort(),
+    'not every browser case completed')
 })
