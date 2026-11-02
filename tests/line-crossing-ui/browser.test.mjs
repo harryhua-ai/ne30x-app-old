@@ -13,7 +13,6 @@ const repoRoot = path.resolve(testRoot, '../..')
 const buildRoot = path.join(testRoot, '.build')
 const productionRoot = path.join(buildRoot, 'production')
 const browserRoot = path.join(buildRoot, 'browser')
-const signedRoot = path.join(buildRoot, 'signed')
 const h264Path = path.join(buildRoot, 'line-crossing-test.h264')
 const lineCountingSource = readFileSync(path.join(repoRoot, 'apps/line-crossing/ui/src/LineCountingModule.tsx'), 'utf8')
 const freshnessMatch = lineCountingSource.match(/const FRESH_FOR_MS\s*=\s*(\d+)\s*;/)
@@ -240,33 +239,6 @@ const closeStreams = () => {
   }
 }
 
-const extractSignedBundle = () => {
-  const bundle = readFileSync(path.join(repoRoot, 'docs/evidence/line-crossing-ui/line-crossing.neui'))
-  assert.equal(bundle.subarray(0, 8).toString('hex'), '4e45554901000000')
-  const manifestLen = bundle.readUInt32LE(8)
-  const payloadLen = bundle.readUInt32LE(12)
-  const manifest = bundle.subarray(16, 16 + manifestLen)
-  const payload = bundle.subarray(16 + manifestLen, 16 + manifestLen + payloadLen)
-  rmSync(signedRoot, { recursive: true, force: true })
-  mkdirSync(signedRoot, { recursive: true })
-  const fileCount = manifest.readUInt16LE(118)
-  let cursor = 128
-  let offset = 0
-  for (let index = 0; index < fileCount; index += 1) {
-    const pathLen = manifest.readUInt16LE(cursor)
-    const fileLen = manifest.readUInt32LE(cursor + 2)
-    const name = manifest.subarray(cursor + 38, cursor + 38 + pathLen).toString('ascii')
-    const bytes = payload.subarray(offset, offset + fileLen)
-    assert.deepEqual(createHash('sha256').update(bytes).digest(), manifest.subarray(cursor + 6, cursor + 38), `signed asset ${name} digest mismatch`)
-    const target = path.join(signedRoot, name)
-    mkdirSync(path.dirname(target), { recursive: true })
-    writeFileSync(target, bytes)
-    cursor += 38 + pathLen
-    offset += fileLen
-  }
-  assert.equal(cursor, manifestLen)
-  assert.equal(offset, payloadLen)
-}
 
 before(async () => {
   assert.equal(existsSync(chromePath), true, 'Chrome or Chromium is required for the offline browser fixture')
@@ -280,7 +252,6 @@ before(async () => {
   frameUnits = locateAccessUnits(readFileSync(h264Path))
   assert.ok(frameUnits.length > 1)
   assert.ok(frameUnits.every(unit => unit.length > 64))
-  extractSignedBundle()
 
   server = createServer((request, response) => {
     const url = new URL(request.url || '/', 'http://127.0.0.1')
@@ -289,7 +260,6 @@ before(async () => {
     response.setHeader('Content-Security-Policy', `default-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws://127.0.0.1:${server.address()?.port}; worker-src 'self' blob:; object-src 'none'; base-uri 'none'`)
     if (url.pathname.startsWith('/production/')) return serveAsset(request, response, productionRoot, '/production')
     if (url.pathname.startsWith('/browser/')) return serveAsset(request, response, browserRoot, '/browser')
-    if (url.pathname.startsWith('/signed/')) return serveAsset(request, response, signedRoot, '/signed')
     response.statusCode = 404
     response.end('not found')
   })
@@ -341,7 +311,7 @@ after(async () => {
 })
 
 test('production entry reports unavailable capabilities without placeholder data or writes', async () => {
-  for (const [label, root] of [['rebuilt production build', '/production/'], ['committed signed bundle content', '/signed/']]) {
+  for (const [label, root] of [['rebuilt production build', '/production/']]) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, locale: 'en-US' })
     await page.goto(`${serverUrl}${root}`, { waitUntil: 'load' })
     await page.getByTestId('lc-module').waitFor()

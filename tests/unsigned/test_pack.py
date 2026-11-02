@@ -31,7 +31,6 @@ from support import (
 
 PACKER = ROOT / "package" / "unsigned" / "neapp_pack_v5.py"
 VERIFIER = ROOT / "package" / "unsigned" / "neapp_verify_v5.py"
-GOLDEN_V3 = ROOT / "docs" / "evidence" / "spec-v3" / "golden.neapp.v3"
 
 
 def run_cli(script: Path, *args: str) -> subprocess.CompletedProcess:
@@ -172,7 +171,10 @@ class CliTests(unittest.TestCase):
             self.assertFalse(out.exists())
 
     def test_verifier_cli_rejects_legacy_signed_package_explicitly(self):
-        verify = run_cli(VERIFIER, "--package", str(GOLDEN_V3), "--compact")
+        with tempfile.TemporaryDirectory(prefix="neapp-v5-cli-legacy-") as raw:
+            legacy = Path(raw) / "legacy.neapp.v3"
+            legacy.write_bytes(bytes.fromhex("4e45415050030000") + b"\x00" * 24)
+            verify = run_cli(VERIFIER, "--package", str(legacy), "--compact")
         self.assertEqual(verify.returncode, 1)
         report = json.loads(verify.stdout)
         self.assertEqual(report["result"], "LEGACY_SIGNED_FORMAT")
