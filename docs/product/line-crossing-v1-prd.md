@@ -1,7 +1,9 @@
 # ne30x-app / Line Crossing 首版 PRD v1.0 — Frozen Product Scope
 
 > 状态：**FROZEN PRODUCT SCOPE v1.0 / 2026-10-15**（User 已要求完成联合 PRD 冻结；与 NE301 `PLAT-01..08` 同一产品验收范围）；维护人：Role A / Project Steward。PRD 冻结不是产品功能 PASS、READY、设备写入或正式发布授权。
-> 产品：NE301 独立 App 平台 + 首个 Line Crossing。配对 PRD：`harryhua-ai/ne301/docs/product/app-platform-v1-prd.md`（同批审阅）。
+> 产品：NE301 独立 App 平台 + 首个 Line Crossing。配对平台 PRD 已与本 PRD 同批审阅冻结。
+>
+> **技术模型更新（2026-11-02，只校正技术事实，不改变冻结 WHAT/DONE）：** 本 PRD 冻结时假设 App 以签名包交付，文中"签名/受信安装"等表述为当期技术假设。已获批准的现行交付模型为 **NEAPP05 无签名管理员安装**：安装/升级/卸载由 Host 端 fail-closed 准入与本地安装记录管理（NEAPP05 清单校验、admin-installed 身份、板级/PSRAM/ABI/caps 约束），签名验签不再是交付链环节。文中"签名"字样一律按此模型理解。
 > 本文规定 **业务 App 及其独立 UI 的 WHAT / DONE**；不是 `.neapp` / Sidecar 协议、Host 管理 API 的第二套规范、`ght` Contract、READY、真机写入或发布许可。
 
 ## 1. 首版用户与产品价值
@@ -60,4 +62,4 @@
 
 此文件与配对平台 PRD 的 **17 项首版产品 WHAT/DONE 已成套冻结 v1.0**；范围变更优先映射 `APP-xx` 或 `PLAT-xx`，由 A 评估产品可见结果/验收/依赖，有实质产品取舍才请 User 批准。Issue 追踪工程候选，**PRD 不复制当前 Claim/PR 状态、不签发 READY**；B 的普通实现 HOW 不自动生成新产品需求。
 
-**规范参考：** [App v3 schema](https://github.com/harryhua-ai/ne30x-app/blob/main/docs/line-crossing-v3-config-schema.md)、[平台架构决定 #79](https://github.com/harryhua-ai/ne301/issues/79)、[长期路线图](https://github.com/harryhua-ai/ne30x-app/blob/main/docs/app-platform-development-roadmap.md)。
+**规范参考：** App 配置编解码与校验的现行权威实现：`apps/line-crossing/app/lc_cfgcodec.h`、`lc_cfgcodec.c`、`apps/line-crossing/app/lc_bus_config.h`（144B config-only，`LC_CFG_SCHEMA=1`）；行为测试：`tests/line-crossing-app/`、`tests/line-crossing-runtime/`；[平台架构决定 #79](https://github.com/harryhua-ai/ne301/issues/79)。
